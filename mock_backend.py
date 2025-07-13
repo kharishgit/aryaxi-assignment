@@ -6,7 +6,8 @@ app = FastAPI()
 
 @app.get("/test")
 async def test_endpoint():
-    if "8001" in sys.argv[1]:  # Simulate failure on port 8001
+    # Simulate random failures for circuit breaker testing
+    if random.random() < 0.2:  # 20% chance of failure
         raise HTTPException(status_code=500, detail="Simulated backend failure")
     return {"message": "Backend response"}
 

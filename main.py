@@ -34,17 +34,17 @@ for service_name, urls in services.items():
     circuit_breakers[service_name] = [CircuitBreaker(url) for url in urls]
     current_indices[service_name] = 0
 
-@app.api_route("/v1/proxy/{service_name}", methods=["GET", "POST", "PUT", "DELETE"])
-async def proxy_request(service_name: str, request: Request):
-    logger.info(f"Received request for service: {service_name}, path: {request.url.path}")
-    # Check if service exists
+@app.api_route("/v1/proxy/{service_name}/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def proxy_request(service_name: str, path: str, request: Request):
+    logger.info(f"Request path: {request.url.path}")
+    logger.info(f"Available services: {list(services.keys())}")
+    logger.info(f"Received request for service: {service_name}, remaining path: {path}")
     if service_name not in services:
         logger.error(f"Service {service_name} not found")
         raise HTTPException(status_code=404, detail=f"Service {service_name} not found")
-
+    
     # Get available circuit breakers
     available_cbs = [cb for cb in circuit_breakers[service_name] if cb.can_send_request()]
-    
     if not available_cbs:
         logger.error(f"No available backends for {service_name}")
         raise HTTPException(status_code=503, detail=f"No available backends for {service_name}")
@@ -65,18 +65,12 @@ async def proxy_request(service_name: str, request: Request):
     # Forward request
     try:
         async with httpx.AsyncClient() as client:
-            # Prepare request details
             method = request.method
-            # Extract path after service_name
-            remaining_path = request.url.path.replace(f"/v1/proxy/{service_name}", "") or "/"
-            if remaining_path != "/" and not remaining_path.startswith("/"):
-                remaining_path = f"/{remaining_path}"
-            url = f"{cb.url}{remaining_path}"
+            url = f"{cb.url}/{path}" if path else cb.url
             headers = {k: v for k, v in request.headers.items() if k.lower() != "host"}
             body = await request.body()
 
             logger.info(f"Forwarding {method} request to {url}")
-            # Send request
             response = await client.request(
                 method=method,
                 url=url,
@@ -85,13 +79,11 @@ async def proxy_request(service_name: str, request: Request):
                 params=request.query_params
             )
             
-            # Update circuit breaker on success
             cb.record_success()
             logger.info(f"Successful response from {url}")
             return response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text
     
     except httpx.RequestError as e:
-        # Update circuit breaker on failure
         cb.record_failure()
         logger.error(f"Backend request failed: {str(e)}")
         raise HTTPException(status_code=502, detail=f"Backend request failed: {str(e)}")

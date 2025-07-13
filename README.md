@@ -15,7 +15,7 @@ Configuration: Loads config.yaml using pyyaml, allowing dynamic service-to-URL m
 
 API Contract
 
-Endpoint: /v1/proxy/{service_name:path}
+Endpoint: /v1/proxy/{service_name}
 Methods: GET, POST, PUT, DELETE
 Request: Forwards headers, query params, and body to the selected backend.
 Response:
