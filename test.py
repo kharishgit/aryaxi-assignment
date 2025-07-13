@@ -1,0 +1,1 @@
+for i in {1..6}; do curl http://localhost:8000/v1/proxy/user-service/test; echo ""; done
