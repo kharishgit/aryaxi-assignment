@@ -25,7 +25,7 @@ def load_config() -> Dict[str, List[str]]:
         logger.error(f"Config load error: {e}")
         raise
 
-# Initialize circuit breakers for each backend
+# Initialize circuit breakers for each backenD
 services = load_config()
 circuit_breakers: Dict[str, List[CircuitBreaker]] = {}
 current_indices: Dict[str, int] = {}
